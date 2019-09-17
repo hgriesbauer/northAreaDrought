@@ -23,12 +23,104 @@ library(ggplot2)
 library(here)
 ```
 
-## Including Plots
+## What are the BGC units of interest in the North Area?
 
-You can also embed plots, for example:
+What units do we want to generate drought hazard estimates for?
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+# North Area BGC units are saved in .rda file
+load(here("dat","northBGC.rda"))
+northBGC
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## What ECCC climate stations exist for these units?
+
+Using a bunch of different packages, we can query the ECCC climate station data and see which ones are located in the BGC units of interest.
+
+```{r}
+
+# DON'T RUN - Takes a long time, instead use load()
+# # Step 1 - Select stations in BC with daily data and assign to 'stn'
+# stn<-
+#   weathercan::stations %>% 
+#   dplyr::filter(prov=="BC" & interval=="day") %>%  
+#   
+# # Step 2 - Convert to a spatial file and merge with BGC units (this will take awhile!)
+#   sf::st_as_sf(coords=c("lon","lat")) %>% # convert to spatial file
+#   sf::st_set_crs(4326) %>% # set to WGS1984 datum
+#   bcmaps::transform_bc_albers() %>% # set to BC albers projection
+#   sf::st_join(bcmaps::bec()[,"MAP_LABEL"]) %>%  # merge with BEC
+#   sf::st_drop_geometry() %>%  # drop geometry
+# 
+# # Step 3 - Merge with BGC units of interest (above)
+#   dplyr::filter(MAP_LABEL%in%northBGC) %>% # filter for BGC units of interest
+#   dplyr::mutate(length=end-start+1) %>% # create a column to show record length
+#   dplyr::arrange(MAP_LABEL,desc(length)) %>% 
+#   dplyr::select(station_name,station_id,bgc=MAP_LABEL,start,end,length)
+# 
+# # step 4 save stn so you don't have to run above lines of code
+#   save(stn,file=here("dat","stationList.rda"))
+
+# Load station data compiled from above lines of code
+  load(here("dat","stationList.rda"))
+
+# Print to screen
+  stn
+```
+
+## Download climate data
+Need to download climate data for stations.  This will take a long time, so I saved the downloaded data into an .rda file.
+
+I printed out the station list, and manually selected stations (not shown) that have long records that span the 1961-1990 climate normal period, as much as possible.  In some cases, we may want to join records.
+
+```{r}
+# Row numbers of stations of interest
+stnRow=c(1,   2,   4,  11,  12,  15,  17,  21,  22,  36,  37,  39,  66,  67,
+         72,  73,  85,  86,  87,  93, 108, 109, 123, 137, 143,
+         144, 149, 150, 151, 153)
+
+# Don't run - takes a long time.  Use load() instead
+# Download data using the stnRow (this can take a long time!)
+# climData<-
+#   weather_dl(station_ids=stn$station_id[stnRow],interval="day") %>%
+#   
+#   # format climate data (see below for more information)
+#   select(stn=station_name,date,tmn=min_temp,tmx=max_temp,ppt=total_precip,year,month,day)
+# save(climData,file=here("dat","climData.rda"))
+
+load(here("dat","climData.rda"))
+
+```
+
+## Clean climate station data
+We need to process missing values in the daily climate data.  For this project, we:
+- omitted any years with >10 consecutive missing data in any climate variable;and
+- imputed missing data using adjacent values (closest data before and after missing value)
+
+```{r message=FALSE}
+
+# DON'T RUN - this takes a long time, use load() instead
+
+# cleanECData() for each station
+# x1<-by(INDICES=climData$stn,function(x) cleanECData(x),data=climData) 
+# 
+# # Formatting
+# climData_cleaned<-dplyr::bind_rows(x1,.id="id") 
+# climData_cleaned$stn<-names(x1)[as.numeric(climData_cleaned$id)]
+# rm(x1)
+# save(climData_cleaned,file=here("dat","climData_cleaned.rda"))
+
+# Load cleaned EC climate data from above lines of code
+load(here("dat","climData_cleaned.rda"))
+
+# Summarize station data 
+climData_cleaned %>%
+  group_by(stn,year) %>%
+  summarise(n()) %>%
+  ungroup() %>%
+  group_by(stn) %>%
+  summarise(Num.years=n(),start=min(year),end=max(year))
+
+```
+
