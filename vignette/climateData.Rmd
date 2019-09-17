@@ -136,9 +136,11 @@ climData_cleaned %>%
   inner_join(stn,by=c("stn"="station_name")) %>% 
   select(stn,year,days,bgc) %>% 
   ungroup() %>% 
-  ggplot(aes(year, stn)) +
-  geom_tile(aes(fill = days))
-  
+  mutate(ID=paste(bgc,stn,sep=":")) %>% 
+  ggplot(aes(year, ID)) +
+  geom_tile(aes(fill = days))+
+  theme(legend.position = "none")+
+  theme(axis.text.x = element_text(angle = 90,vjust = 0.5))
 
 
 
