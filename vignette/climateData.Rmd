@@ -124,3 +124,5 @@ climData_cleaned %>%
 
 ```
 
+## Figure showing data coverage for each station
+
