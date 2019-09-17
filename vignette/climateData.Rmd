@@ -125,4 +125,22 @@ climData_cleaned %>%
 ```
 
 ## Figure showing data coverage for each station
+It might be useful to produce a figure showing climate data coverage for each station and BGC unit.
 
+```{r}
+
+climData_cleaned %>% 
+  select(stn,year) %>% 
+  group_by(stn,year) %>% 
+  summarise(days=n()) %>% 
+  inner_join(stn,by=c("stn"="station_name")) %>% 
+  select(stn,year,days,bgc) %>% 
+  ungroup() %>% 
+  ggplot(aes(year, stn)) +
+  geom_tile(aes(fill = days))
+  
+
+
+
+
+```
