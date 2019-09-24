@@ -147,29 +147,6 @@ climData_cleaned %>%
 ```
 
 
-## Remove leap year data
-```{r}
 
-leapInd<-
-climData_cleaned %>%   
-  c%>% 
-  filter(days>365)
-
-X<-
-climData_cleaned %>% 
-  filter(stn=="ALEZA LAKE" & year==1956) 
-  write.csv(as.data.frame(X),file="leapYearCheck.csv")
-
-X<-climData_cleaned[-which(climData_cleaned$month=="02" & climData_cleaned$day=="29"),]
-
-X %>% 
-  
-  group_by(stn,year) %>% 
-  summarise(days=n()) %>% 
-  ungroup() %>% 
-  group_by(stn) %>% 
-  summarise(days=max(days))
-
-```
 
 
