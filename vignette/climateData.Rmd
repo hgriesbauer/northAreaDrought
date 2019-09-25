@@ -1,8 +1,11 @@
 ---
-title: "climate data"
+title: "Generating ASMR estimates for North Area BGC units"
 author: "Hardy Griesbauer"
 date: "17/09/2019"
-output: html_document
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -17,10 +20,11 @@ various BGC units in the North Area.
 ```{r message=FALSE}
 # Load libraries
 library(forestDroughtTool)
-library(dplyr)
+library(tidyverse)
 library(weathercan)
 library(ggplot2)
 library(here)
+library(magrittr)
 ```
 
 ## What are the BGC units of interest in the North Area?
@@ -72,6 +76,8 @@ Using a bunch of different packages, we can query the ECCC climate station data 
 ## Download climate data
 Need to download climate data for stations.  This will take a long time, so I saved the downloaded data into an .rda file.
 
+* Note that in the future we will want to update some of the station data with cleaned data from Vanessa.  This will take me some time!*
+
 I printed out the station list, and manually selected stations (not shown) that have long records that span the 1961-1990 climate normal period, as much as possible.  In some cases, we may want to join records.
 
 ```{r}
@@ -87,6 +93,7 @@ stnRow=c(1,   2,   4,  11,  12,  15,  17,  21,  22,  36,  37,  39,  66,  67,
 #   
 #   # format climate data (see below for more information)
 #   select(stn=station_name,date,tmn=min_temp,tmx=max_temp,ppt=total_precip,year,month,day)
+
 # save(climData,file=here("dat","climData.rda"))
 
 load(here("dat","climData.rda"))
@@ -97,6 +104,7 @@ load(here("dat","climData.rda"))
 We need to process missing values in the daily climate data.  For this project, we:
 - omitted any years with >10 consecutive missing data in any climate variable;and
 - imputed missing data using adjacent values (closest data before and after missing value)
+- Leap years have 366 days, so we removed February 29 from those years to keep number of days to 365.
 
 ```{r message=FALSE}
 
@@ -109,6 +117,18 @@ We need to process missing values in the daily climate data.  For this project, 
 # climData_cleaned<-dplyr::bind_rows(x1,.id="id") 
 # climData_cleaned$stn<-names(x1)[as.numeric(climData_cleaned$id)]
 # rm(x1)
+
+# # Format date columns
+# climData_cleaned%<>%
+#   mutate(month=as.integer(month)) %>% 
+#   mutate(day=as.integer(day)) %>% 
+#   mutate(year=as.integer(year)) %>% 
+#   mutate(date=paste(year,month,day,sep="-"))
+
+# Rename columns to make it easier to pass to asmrCalc()
+# climData_cleaned%<>%
+#   rename(!!'tmn':=tmn_filled,!!'ppt':=ppt_filled,!!'tmx':=tmx_filled)
+
 # save(climData_cleaned,file=here("dat","climData_cleaned.rda"))
 
 # Load cleaned EC climate data from above lines of code
@@ -147,6 +167,111 @@ climData_cleaned %>%
 ```
 
 
+## Select stations and climate data to run model
+Generally, we have been summarising site ASMR using 10 years of daily climate data.  The rationale for this is that we want to keep data consistent between BGC units, and we need to be able to use stations with relatively sparse data (ie. 10 years).
 
+Based on a conversation with Vanessa, we've decided on the following:
+
+1. Restrict data to 1940 and 1990.  Data pre-1940 may have measurement errors, and post-1990 is starting to get into the "climate change" realm.
+2. Ideally, restrict years to 1961-1990 normal period.  If number of years available is less than 10, then use years from 1940-1990.
+3. Select 10 years randomly from within the dataset.  If there are less than 10 years of data within 1961-1990 dataset, then use all the years from 1961-1990, and add random years' data from 1940-1960 until number of years = 10.
+
+This is all taken care of in the asmrSelect() function in the forestDroughtTool package.
+
+```{r}
+
+# Need to change Pink Mountain2 to Pink Mountain, to concatenate the datasets
+climData_cleaned %<>% 
+  mutate(stn=replace(stn,stn=="PINK MOUNTAIN 2","PINK MOUNTAIN"))
+
+# Designate stations to use:
+stnList=unique(climData_cleaned$stn)[c(2,3,4,6,9,11,12,16,17,19,20,21,24,26,29)]
+stnID<-stn[stn$station_name%in%stnList,]
+stnID<-stnID[stnID$station_id!="50820",] # get rid of extra Williams Lake data
+
+# Print out stations used to estimate current drought hazard in North Area
+stnID
+```
+
+Now let's run a loop to generate the dataset and export it.
+
+```{r}
+
+# Don't run this takes a long time, use load () instead
+# for (j in 1:nrow(stnID)) {
+#   
+#   # Get ASMR summaries for the station
+#   x<-
+#     climData_cleaned %>% 
+#     filter(stn==stnID$station_name[j]) %>% 
+#     asmrCalc() %>% 
+#     asmrSelect() 
+#   
+#   # Extract ASMR mean and SD
+#   asmr<-
+#     x$asmr %>% 
+#     mutate(bgc=stnID$bgc[j]) %>% 
+#     dplyr::select(bgc,month,everything())
+#   
+#   # Extract years used to calculate ASMR
+#   yearASMR<-
+#     c(stnID$bgc[j],x$years)
+#   
+#   # Compile asmr into data frame
+#   if(j==1) {asmrNorth=asmr} else {asmrNorth=rbind(asmrNorth,asmr)} 
+#   
+#   # Compile years into data frame
+#   if(j==1) {years=yearASMR} else {years=rbind(years,yearASMR)}  
+#   
+#   if (j==nrow(stnID)) {
+#     
+#     years=as.data.frame(years)
+#     names(years)=c("bgc",paste("year",1:10,sep=""))
+#     years<-as_tibble(years)
+#     
+#   }
+#   
+# }
+  
+  # save(asmrNorth,file="asmrNorth.rda")
+   # save(years,file="years.rda")
+  
+load(here::here("dat","asmrNorth.rda"))
+
+```
+
+# ANALYSIS
+
+## Generate annual ASMR estimates by BGC unit
+
+```{r}
+
+# Generate annual AET/PET for five sites by BGC unit
+asmrANNUAL<-
+  asmrNorth %>% 
+  dplyr::select(bgc,month,contains(".mean")) %>% 
+  group_by(bgc) %>% 
+  summarise_at(vars(contains(".mean")),mean) 
+
+knitr::kable(asmrANNUAL,digits=2)
+# write.csv(asmrANNUAL,file="asmrANNUAL.csv")
+
+# Classify
+asmrCut<-function(x) cut(x,breaks=c(0,asmrClass$asmrUL),labels=asmrClass$class)
+
+asmrANNUAL %>% 
+  mutate_if(is.numeric,asmrCut) %>% 
+  knitr::kable()
+  
+
+```
+
+## BGC units without climate data
+For the following BGC units that don't have climate data, can we lump any BGC units together (i.e., create ASMR estimates for one BGC unit using ASMR from another):
+
+```{r}
+northBGC[!northBGC%in%asmrANNUAL$bgc]
+
+```
 
 
