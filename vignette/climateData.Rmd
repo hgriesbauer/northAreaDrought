@@ -166,7 +166,6 @@ climData_cleaned %>%
 
 ```
 
-
 ## Select stations and climate data to run model
 Generally, we have been summarising site ASMR using 10 years of daily climate data.  The rationale for this is that we want to keep data consistent between BGC units, and we need to be able to use stations with relatively sparse data (ie. 10 years).
 
@@ -184,14 +183,89 @@ This is all taken care of in the asmrSelect() function in the forestDroughtTool 
 climData_cleaned %<>% 
   mutate(stn=replace(stn,stn=="PINK MOUNTAIN 2","PINK MOUNTAIN"))
 
-# Designate stations to use:
-stnList=unique(climData_cleaned$stn)[c(2,3,4,6,9,11,12,16,17,19,20,21,24,26,29)]
-stnID<-stn[stn$station_name%in%stnList,]
-stnID<-stnID[stnID$station_id!="50820",] # get rid of extra Williams Lake data
 
-# Print out stations used to estimate current drought hazard in North Area
-stnID
+
 ```
+
+### Use data for ICHwk1 and ICHvk2
+Dome creek and Crescent Spur stations are located near the valley bottoms in the Robson Valley, near the boundary between ICH and SBSvk.  Given their proximity to the BGC unit boundary, and based on expert ecologist opinion (ie., Craig and Bruce), we decided to use these stations to represent adjacent ICH variants.  Same for Blue River station.
+
+```{r}
+
+stations %>% 
+  filter(str_detect(station_name,'DOME CREEK|CRESCENT SPUR|BLUE RIVER')) %>% 
+  filter(interval=="day")
+
+```
+
+Blue River North (station id = 1238) and Dome Creek (station id = 581) look to have good data.  Crescent Spur only has data from 1992 - so we won't use this station for now.
+
+Blue River A does not have adequate data!
+
+Next step is to extract clean/data for Dome Creek and Blue River North and compile it with the rest of the climate dataset.
+
+```{r}
+
+# Don't run this -takes a long time.  Use load() instead  
+# climData2<-
+#    weather_dl(station_ids=c(581,1238), interval="day") %>% 
+# select(stn=station_name,date,tmn=min_temp,tmx=max_temp,ppt=total_precip,year,month,day)
+
+# cleanECData() for each station
+
+# dome<-data.frame(stn="DOME CREEK",cleanECData(filter(climData2,stn=="DOME CREEK"))) %>% 
+#   mutate(bgc="ICHvk2") %>% 
+#   mutate(stn_id=581) %>% 
+#   mutate(id=31)
+# 
+# blue<-data.frame(stn="BLUE RIVER",cleanECData(filter(climData2,stn=="BLUE RIVER NORTH"))) %>% 
+#   mutate(bgc="ICHwk1") %>% 
+#   mutate(stn_id=1238) %>% 
+#   mutate(id=32)
+# 
+# x1<-rbind(blue,dome)
+# 
+# # Format date columns
+#  x1%<>%
+#    mutate(month=as.integer(month)) %>% 
+#    mutate(day=as.integer(day)) %>% 
+#    mutate(year=as.integer(year)) %>% 
+#    mutate(date=paste(year,month,day,sep="-")) %>% 
+# 
+#    # Rename columns to make it easier to pass to asmrCalc()
+#    rename(!!'tmn':=tmn_filled,!!'ppt':=ppt_filled,!!'tmx':=tmx_filled) %>% 
+#    
+#    # select columns
+#    dplyr::select(names(climData_cleaned))
+#      
+# 
+#  # Merge with climData_cleaned
+#  climData_cleaned=rbind(climData_cleaned,x1)
+#  save(climData_cleaned,file=here::here("dat","climData_cleaned.rda"))
+ 
+# Designate stations to use:
+stnList=c(1432,547,1397,569,568,482,664,601,623,588,496,631,1423,564,1429,1238,581)
+
+# Bring in Dome Creek and Blue River station data as well
+stnID<-
+  stations %>% 
+  filter(station_id==581|station_id==1238) %>% 
+  filter(interval=="day") %>% 
+  mutate(bgc="ICHwk1") %>% 
+  mutate(bgc=replace(bgc,station_id==581,"ICHvk2")) %>%
+  mutate(station_name=replace(station_name,station_id==1238,"BLUE RIVER")) %>% 
+  mutate(length=end-start+1) %>% 
+  select(station_name,station_id,bgc,start,end,length) %>% 
+  rbind(stn[stn$station_id%in%stnList,]) # rbind with the rest of the stations
+  
+
+# Print out stations used in ASMR
+stnID
+
+```
+
+
+## Calculate ASMR for the stations
 
 Now let's run a loop to generate the dataset and export it.
 
@@ -199,42 +273,42 @@ Now let's run a loop to generate the dataset and export it.
 
 # Don't run this takes a long time, use load () instead
 # for (j in 1:nrow(stnID)) {
-#   
+# 
 #   # Get ASMR summaries for the station
 #   x<-
-#     climData_cleaned %>% 
-#     filter(stn==stnID$station_name[j]) %>% 
-#     asmrCalc() %>% 
-#     asmrSelect() 
-#   
+#     climData_cleaned %>%
+#     filter(stn==stnID$station_name[j]) %>%
+#     asmrCalc() %>%
+#     asmrSelect()
+# 
 #   # Extract ASMR mean and SD
 #   asmr<-
-#     x$asmr %>% 
-#     mutate(bgc=stnID$bgc[j]) %>% 
+#     x$asmr %>%
+#     mutate(bgc=stnID$bgc[j]) %>%
 #     dplyr::select(bgc,month,everything())
-#   
+# 
 #   # Extract years used to calculate ASMR
 #   yearASMR<-
 #     c(stnID$bgc[j],x$years)
-#   
+# 
 #   # Compile asmr into data frame
-#   if(j==1) {asmrNorth=asmr} else {asmrNorth=rbind(asmrNorth,asmr)} 
-#   
+#   if(j==1) {asmrNorth=asmr} else {asmrNorth=rbind(asmrNorth,asmr)}
+# 
 #   # Compile years into data frame
-#   if(j==1) {years=yearASMR} else {years=rbind(years,yearASMR)}  
-#   
+#   if(j==1) {years=yearASMR} else {years=rbind(years,yearASMR)}
+# 
 #   if (j==nrow(stnID)) {
-#     
+# 
 #     years=as.data.frame(years)
 #     names(years)=c("bgc",paste("year",1:10,sep=""))
 #     years<-as_tibble(years)
-#     
+# 
 #   }
-#   
+# 
 # }
-  
-  # save(asmrNorth,file="asmrNorth.rda")
-   # save(years,file="years.rda")
+#   
+#   save(asmrNorth,file=here::here("dat","asmrNorth.rda"))
+#   save(years,file=here::here("dat","years.rda"))
   
 load(here::here("dat","asmrNorth.rda"))
 
@@ -253,15 +327,6 @@ asmrANNUAL<-
   group_by(bgc) %>% 
   summarise_at(vars(contains(".mean")),mean) 
 
-knitr::kable(asmrANNUAL,digits=2)
-# write.csv(asmrANNUAL,file="asmrANNUAL.csv")
-
-# Classify
-asmrCut<-function(x) cut(x,breaks=c(0,asmrClass$asmrUL),labels=asmrClass$class)
-
-asmrANNUAL %>% 
-  mutate_if(is.numeric,asmrCut) %>% 
-  knitr::kable()
   
 
 ```
@@ -274,4 +339,45 @@ northBGC[!northBGC%in%asmrANNUAL$bgc]
 
 ```
 
+### Amalgamate drought estimates by subzone (not variant) for variants missing climate data
+Create a list of BGC units that have ASMR data that we can use to provide estimates for climate-missing BGC units:
 
+```{r}
+# Create a lookup table to assign subzones to their respective variant with climate data
+# bgc.miss=bgc unit missing climate data
+# bgc.comp=bgc unit with climate station data
+look.tab<-
+  tibble(bgc.miss=northBGC[!northBGC%in%asmrANNUAL$bgc]) %>% 
+  mutate(bgc.comp="ESSFmv2") %>% 
+  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'SBSmc'),"SBSmc2")) %>% 
+  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'MHmm2'),"NA")) %>% 
+  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ICHwk'),"ICHwk1")) %>% 
+  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ICHmc'),"ICHmc2")) %>%
+  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'SBSwk'),"SBSwk1")) %>% 
+  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ESSFxv'),"NA")) %>%
+  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ESSFwk'),"NA")) %>% 
+  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ESSFmm'),"NA")) %>% 
+  mutate(S1.mean=NA,S2.mean=NA,S3.mean=NA,S4.mean=NA,S5.mean=NA)
+  
+# 
+
+
+```
+
+
+```{r}
+
+
+
+knitr::kable(asmrANNUAL,digits=2)
+# write.csv(asmrANNUAL,file="asmrANNUAL.csv")
+
+# Classify
+asmrCut<-function(x) cut(x,breaks=c(0,asmrClass$asmrUL),labels=asmrClass$class)
+
+asmrANNUAL %>% 
+  mutate_if(is.numeric,asmrCut) %>% 
+  knitr::kable()
+
+
+```
