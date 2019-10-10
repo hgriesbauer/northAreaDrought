@@ -292,7 +292,7 @@ Now let's run a loop to generate the dataset and export it.
 #     c(stnID$bgc[j],x$years)
 # 
 #   # Compile asmr into data frame
-#   if(j==1) {asmrNorth=asmr} else {asmrNorth=rbind(asmrNorth,asmr)}
+#   if(j==1) {asmrNorth2=asmr} else {asmrNorth2=rbind(asmrNorth2,asmr)}
 # 
 #   # Compile years into data frame
 #   if(j==1) {years=yearASMR} else {years=rbind(years,yearASMR)}
@@ -306,11 +306,11 @@ Now let's run a loop to generate the dataset and export it.
 #   }
 # 
 # }
-#   
-#   save(asmrNorth,file=here::here("dat","asmrNorth.rda"))
+# 
+#   save(asmrNorth2,file=here::here("dat","asmrNorth2.rda"))
 #   save(years,file=here::here("dat","years.rda"))
-  
-load(here::here("dat","asmrNorth.rda"))
+
+load(here::here("dat","asmrNorth2.rda"))
 
 ```
 
@@ -322,7 +322,7 @@ load(here::here("dat","asmrNorth.rda"))
 
 # Generate annual AET/PET for five sites by BGC unit
 asmrANNUAL<-
-  asmrNorth %>% 
+  asmrNorth2 %>% 
   dplyr::select(bgc,month,contains(".mean")) %>% 
   group_by(bgc) %>% 
   summarise_at(vars(contains(".mean")),mean) 
@@ -375,6 +375,12 @@ asmrANNUAL2<-
 asmrANNUAL2
   
 
+```
+
+Now let's see which bgc units are missing data:
+
+```{r}
+northBGC[!northBGC%in%asmrANNUAL2$bgc]
 ```
 
 
