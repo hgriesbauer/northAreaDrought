@@ -327,7 +327,8 @@ asmrANNUAL<-
   group_by(bgc) %>% 
   summarise_at(vars(contains(".mean")),mean) 
 
-  
+# Print asmrANNUAL
+asmrANNUAL
 
 ```
 
@@ -343,24 +344,36 @@ northBGC[!northBGC%in%asmrANNUAL$bgc]
 Create a list of BGC units that have ASMR data that we can use to provide estimates for climate-missing BGC units:
 
 ```{r}
-# Create a lookup table to assign subzones to their respective variant with climate data
-# bgc.miss=bgc unit missing climate data
-# bgc.comp=bgc unit with climate station data
-look.tab<-
-  tibble(bgc.miss=northBGC[!northBGC%in%asmrANNUAL$bgc]) %>% 
-  mutate(bgc.comp="ESSFmv2") %>% 
-  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'SBSmc'),"SBSmc2")) %>% 
-  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'MHmm2'),"NA")) %>% 
-  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ICHwk'),"ICHwk1")) %>% 
-  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ICHmc'),"ICHmc2")) %>%
-  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'SBSwk'),"SBSwk1")) %>% 
-  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ESSFxv'),"NA")) %>%
-  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ESSFwk'),"NA")) %>% 
-  mutate(bgc.comp=replace(bgc.comp,str_detect(bgc.miss,'ESSFmm'),"NA")) %>% 
-  mutate(S1.mean=NA,S2.mean=NA,S3.mean=NA,S4.mean=NA,S5.mean=NA)
-  
-# 
+# Create a function to assign subzones to their respective variant with climate data
 
+# bgcMissing is the BGC unit that is missing climate data
+# bgcComplete is the BGC unit that you want to use the ASMR values for bgcMissing
+
+bgc.subF<-function(bgcMissing,bgcComplete) { 
+  
+  return(data.frame(bgc=bgcMissing,
+              asmrANNUAL[asmrANNUAL$bgc%in%bgcComplete,2:ncol(asmrANNUAL)]
+            ))
+    }
+
+# Now run the function for BGC units missing data
+
+asmrANNUAL2<-
+  bgc.subF("SBSwk3","SBSwk1") %>% 
+  rbind(bgc.subF("ESSFmv4","ESSFmv2")) %>% 
+  rbind(bgc.subF("ESSFmv3","ESSFmv2")) %>% 
+  rbind(bgc.subF("ESSFmv1","ESSFmv2")) %>% 
+  rbind(bgc.subF("SBSmc1","SBSmc2")) %>% 
+  rbind(bgc.subF("SBSmc3","SBSmc2")) %>% 
+  rbind(bgc.subF("ICHmc1","ICHmc2")) %>%
+  rbind(bgc.subF("ESSFwk2","ESSFwk1")) %>% 
+  rbind(bgc.subF("ICHwk3","ICHwk1")) %>% 
+  rbind(bgc.subF("ICHwk4","ICHwk1")) %>% 
+  rbind(asmrANNUAL)
+  
+# Print results to document
+asmrANNUAL2
+  
 
 ```
 
@@ -369,15 +382,33 @@ look.tab<-
 
 
 
-knitr::kable(asmrANNUAL,digits=2)
+knitr::kable(asmrANNUAL2,digits=2)
 # write.csv(asmrANNUAL,file="asmrANNUAL.csv")
 
 # Classify
 asmrCut<-function(x) cut(x,breaks=c(0,asmrClass$asmrUL),labels=asmrClass$class)
 
-asmrANNUAL %>% 
+asmrNorthClass<-
+  asmrANNUAL2 %>% 
   mutate_if(is.numeric,asmrCut) %>% 
-  knitr::kable()
+  mutate(bgc=as.character(bgc)) %>%  
+  arrange(bgc) 
+  
+  knitr::kable(asmrNorthClass)
+
+
+```
+
+## Final task: Export data and save it to 
+
+```{r}
+# Create data to export as a list
+stnYears<-
+  stnID %>% 
+  dplyr::select(stn=station_name,stnID=station_id,bgc) %>% 
+  inner_join(years,by="bgc")
+
+asmrNorth<-list(current=list(class=asmrNorthClass,asmr=asmrANNUAL2,stnYears),future=list())
 
 
 ```
