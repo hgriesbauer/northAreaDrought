@@ -311,6 +311,7 @@ Now let's run a loop to generate the dataset and export it.
 #   save(years,file=here::here("dat","years.rda"))
 
 load(here::here("dat","asmrNorth2.rda"))
+load(here::here("dat","years.rda"))
 
 ```
 
