@@ -415,7 +415,159 @@ stnYears<-
   dplyr::select(stn=station_name,stnID=station_id,bgc) %>% 
   inner_join(years,by="bgc")
 
-asmrNorth<-list(current=list(class=asmrNorthClass,asmr=asmrANNUAL2,stnYears),future=list())
+asmrNorth<-list(current=list(class=asmrNorthClass,asmr=asmrANNUAL2,stnData=stnYears),future=list())
 
 
 ```
+
+***
+## Estimating future drought hazard under climate change scenarios
+The Stand-Level Drought Tool estimates future drought by running the daily water balance model and adjusting daily cliamte data based on future normals.  This involves the following:
+
+1. Use the BGC climate normal and future summaries produced by Will Mackenzie and Kiri Daust;
+2. Determine the % difference between current (1961-1990 period) and future scenarios for monthly temperatures and precipitation; and
+3. Apply those differences to daily climate data to estimate future daily data.
+
+A few notes:
+- Future scenarios in the BGC summaries are 4.5 and 8.5 scenarios.  We will also generate an 'average' scenario that averages the 4.5/8.5 data.
+
+### Create station list for BGC units without station data
+```{r}
+
+# Create station data frame
+stnData<-asmrNorth$current$stnData
+
+# Create function to calculate future ASMR for BGC units without stationdata
+bgcStnLook<-function(stnName,bgcName) {
+  
+  stnData %>% 
+    filter(stn==stnName) %>% 
+    mutate(bgc=bgcName) %>% 
+    return()
+}
+
+stnData2<-
+  bgcStnLook("BOWRON LAKE","SBSwk3") %>% 
+  rbind(bgcStnLook("BULLMOOSE","ESSFmv4")) %>% 
+  rbind(bgcStnLook("BULLMOOSE","ESSFmv3")) %>% 
+  rbind(bgcStnLook("BULLMOOSE","ESSFmv1")) %>% 
+  rbind(bgcStnLook("TOPLEY LANDING","SBSmc1")) %>% 
+  rbind(bgcStnLook("TOPLEY LANDING","SBSmc3")) %>% 
+  rbind(bgcStnLook("NASS CAMP","ICHmc1")) %>% 
+  rbind(bgcStnLook("BARKERVILLE","ESSFwk2")) %>% 
+  rbind(bgcStnLook("BLUE RIVER","ICHwk3")) %>% 
+  rbind(bgcStnLook("BLUE RIVER","ICHwk4")) %>% 
+  rbind(stnData) %>% 
+  arrange(bgc)
+ 
+
+```
+
+
+
+```{r}
+# Create a loop to generate future asmr 
+
+
+for (k in 1:nrow(stnData2)) {
+  stnName=stnData2$stn[k]
+  bgcName=stnData2$bgc[k]
+  yearList<-
+    stnData2 %>% 
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>% 
+    filter(stn==stnName) %>% 
+    dplyr::select(starts_with("year")) %>% 
+    .[1,] %>% 
+    as.numeric()
+  
+  x<-asmr(stnData=filter(climData_cleaned,stn==stnName),bgc=bgcName,years=yearList)
+  
+  bgcData<-
+    data.frame(stn=stnName,bgc=bgcName,year=yearList) %>% 
+    mutate(years=1:nrow(.)) %>% 
+    pivot_wider(values_from=year,names_from=years,names_prefix="year")
+  
+  
+  if (k==1) {asmr.class=list(); asmr.value=list(); asmr.stn=list()}
+  
+  asmr.class[[bgcName]]=x$class
+  asmr.value[[bgcName]]=x$asmr
+  asmr.stn[[bgcName]]=bgcData
+}
+
+
+
+
+```
+
+### Final compilation
+put everything together
+
+```{r}
+# Future Annual ASMR classes
+asmrFutureAnnual.class<-
+  bind_rows(asmr.class) %>% 
+  filter(month=="Annual") %>% 
+  filter(Scenario!="current") %>% 
+  dplyr::select(-month)
+
+# Future Monthly ASMR classes
+asmrFutureMonthly.class<-
+  bind_rows(asmr.class) %>% 
+  filter(month!="Annual") %>% 
+  filter(Scenario!="current")
+
+# Future Annual ASMR values
+asmrFutureAnnual.asmr<-
+  bind_rows(asmr.value) %>% 
+  filter(month=="Annual") %>% 
+  filter(Scenario!="current") %>% 
+  dplyr::select(-month)
+
+# Future Monthly ASMR values
+asmrFutureMonthly.asmr<-
+  bind_rows(asmr.value) %>% 
+  filter(month!="Annual") %>% 
+  filter(Scenario!="current") 
+
+# asmrCurrent monthly class
+asmrCurrentMonthly.class<-
+  bind_rows(asmr.class) %>% 
+  filter(month!="Annual") %>% 
+  filter(Scenario=="current")
+
+# asmrCurrent monthly values 
+asmrCurrentMonthly.value<- 
+  bind_rows(asmr.value) %>% 
+  filter(month!="Annual") %>% 
+  filter(Scenario=="current")
+
+# asmrCurrent annual class
+asmrCurrentAnnual.class<-
+  asmrNorth$current$class
+
+# asmrCurrent annual values
+asmrCurrentAnnual.values<-
+  asmrNorth$current$asmr
+
+# stationList
+stnData<-stnData2
+ 
+# FINAL LIST
+asmrNorth=list(
+  current=list(annual=list(asmr=asmrCurrentAnnual.values,class=asmrCurrentAnnual.class),
+      monthly=list(asmr=asmrCurrentMonthly.value, class=asmrCurrentMonthly.class)),
+  
+  future=list(annual=list(asmr=asmrFutureAnnual.asmr,class=asmrFutureAnnual.class),
+    monthly=list(asmr=asmrFutureMonthly.asmr, class=asmrFutureMonthly.class)),
+  
+    stnData=stnData
+   
+  )
+
+
+
+
+```
+
+
