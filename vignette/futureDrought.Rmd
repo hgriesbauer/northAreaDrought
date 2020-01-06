@@ -8,6 +8,9 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(forestDroughtTool)
+library(tidyverse)
+
 ```
 
 ## Estimating future drought hazard under climate change scenarios
@@ -20,15 +23,29 @@ The Stand-Level Drought Tool estimates future drought by running the daily water
 A few notes:
 - Future scenarios in the BGC summaries are 4.5 and 8.5 scenarios.  We will also generate an 'average' scenario that averages the 4.5/8.5 data.
 
-### Step: Get BGC summaries and compute % differences
+*Note: created an asmrFuture() function in forestDroughtTool package to handle all of this.*
+
+### Step: Get normal (1961-1990) asmr for BGC units
 
 ```{r}
-# Load BGC summary data
-  load(here::here("dat","northBGC.rda"))
+# What are the BGC units of interest?
+load(here::here("dat","asmrNorth.rda"))
+  
+# BGC list
+bgcList=asmrNorth$current$class$bgc
+bgcList     
+
+```
+
+### Define a function to calculate future ASMR for each BGC using the futureASMR()
+
+```{r}
 
 
-     
+
 
 
 ```
+
+
 

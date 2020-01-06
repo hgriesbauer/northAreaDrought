@@ -463,38 +463,38 @@ stnData2<-
 
 ```
 
-
+DON'T RUN CODE BELOW, TAKES A LONG TIME.
 
 ```{r}
 # Create a loop to generate future asmr 
 
 
-for (k in 1:nrow(stnData2)) {
-  stnName=stnData2$stn[k]
-  bgcName=stnData2$bgc[k]
-  yearList<-
-    stnData2 %>% 
-    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>% 
-    filter(stn==stnName) %>% 
-    dplyr::select(starts_with("year")) %>% 
-    .[1,] %>% 
-    as.numeric()
-  
-  x<-asmr(stnData=filter(climData_cleaned,stn==stnName),bgc=bgcName,years=yearList)
-  
-  bgcData<-
-    data.frame(stn=stnName,bgc=bgcName,year=yearList) %>% 
-    mutate(years=1:nrow(.)) %>% 
-    pivot_wider(values_from=year,names_from=years,names_prefix="year")
-  
-  
-  if (k==1) {asmr.class=list(); asmr.value=list(); asmr.stn=list()}
-  
-  asmr.class[[bgcName]]=x$class
-  asmr.value[[bgcName]]=x$asmr
-  asmr.stn[[bgcName]]=bgcData
-}
-
+# for (k in 1:nrow(stnData2)) {
+#   stnName=stnData2$stn[k]
+#   bgcName=stnData2$bgc[k]
+#   yearList<-
+#     stnData2 %>% 
+#     mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>% 
+#     filter(stn==stnName) %>% 
+#     dplyr::select(starts_with("year")) %>% 
+#     .[1,] %>% 
+#     as.numeric()
+#   
+#   x<-asmr(stnData=filter(climData_cleaned,stn==stnName),bgc=bgcName,years=yearList)
+#   
+#   bgcData<-
+#     data.frame(stn=stnName,bgc=bgcName,year=yearList) %>% 
+#     mutate(years=1:nrow(.)) %>% 
+#     pivot_wider(values_from=year,names_from=years,names_prefix="year")
+#   
+#   
+#   if (k==1) {asmr.class=list(); asmr.value=list(); asmr.stn=list()}
+#   
+#   asmr.class[[bgcName]]=x$class
+#   asmr.value[[bgcName]]=x$asmr
+#   asmr.stn[[bgcName]]=bgcData
+# }
+# 
 
 
 
@@ -504,67 +504,70 @@ for (k in 1:nrow(stnData2)) {
 put everything together
 
 ```{r}
-# Future Annual ASMR classes
-asmrFutureAnnual.class<-
-  bind_rows(asmr.class) %>% 
-  filter(month=="Annual") %>% 
-  filter(Scenario!="current") %>% 
-  dplyr::select(-month)
+# # Future Annual ASMR classes
+# asmrFutureAnnual.class<-
+#   bind_rows(asmr.class) %>% 
+#   filter(month=="Annual") %>% 
+#   filter(Scenario!="current") %>% 
+#   dplyr::select(-month)
+# 
+# # Future Monthly ASMR classes
+# asmrFutureMonthly.class<-
+#   bind_rows(asmr.class) %>% 
+#   filter(month!="Annual") %>% 
+#   filter(Scenario!="current")
+# 
+# # Future Annual ASMR values
+# asmrFutureAnnual.asmr<-
+#   bind_rows(asmr.value) %>% 
+#   filter(month=="Annual") %>% 
+#   filter(Scenario!="current") %>% 
+#   dplyr::select(-month)
+# 
+# # Future Monthly ASMR values
+# asmrFutureMonthly.asmr<-
+#   bind_rows(asmr.value) %>% 
+#   filter(month!="Annual") %>% 
+#   filter(Scenario!="current") 
+# 
+# # asmrCurrent monthly class
+# asmrCurrentMonthly.class<-
+#   bind_rows(asmr.class) %>% 
+#   filter(month!="Annual") %>% 
+#   filter(Scenario=="current")
+# 
+# # asmrCurrent monthly values 
+# asmrCurrentMonthly.value<- 
+#   bind_rows(asmr.value) %>% 
+#   filter(month!="Annual") %>% 
+#   filter(Scenario=="current")
+# 
+# # asmrCurrent annual class
+# asmrCurrentAnnual.class<-
+#   asmrNorth$current$class
+# 
+# # asmrCurrent annual values
+# asmrCurrentAnnual.values<-
+#   asmrNorth$current$asmr
+# 
+# # stationList
+# stnData<-stnData2
+#  
+# # FINAL LIST
+# asmrNorth=list(
+#   current=list(annual=list(asmr=asmrCurrentAnnual.values,class=asmrCurrentAnnual.class),
+#       monthly=list(asmr=asmrCurrentMonthly.value, class=asmrCurrentMonthly.class)),
+#   
+#   future=list(annual=list(asmr=asmrFutureAnnual.asmr,class=asmrFutureAnnual.class),
+#     monthly=list(asmr=asmrFutureMonthly.asmr, class=asmrFutureMonthly.class)),
+#   
+#     stnData=stnData
+#    
+#   )
+# 
+# save(asmrNorth,file="asmrNorth.rda")
 
-# Future Monthly ASMR classes
-asmrFutureMonthly.class<-
-  bind_rows(asmr.class) %>% 
-  filter(month!="Annual") %>% 
-  filter(Scenario!="current")
-
-# Future Annual ASMR values
-asmrFutureAnnual.asmr<-
-  bind_rows(asmr.value) %>% 
-  filter(month=="Annual") %>% 
-  filter(Scenario!="current") %>% 
-  dplyr::select(-month)
-
-# Future Monthly ASMR values
-asmrFutureMonthly.asmr<-
-  bind_rows(asmr.value) %>% 
-  filter(month!="Annual") %>% 
-  filter(Scenario!="current") 
-
-# asmrCurrent monthly class
-asmrCurrentMonthly.class<-
-  bind_rows(asmr.class) %>% 
-  filter(month!="Annual") %>% 
-  filter(Scenario=="current")
-
-# asmrCurrent monthly values 
-asmrCurrentMonthly.value<- 
-  bind_rows(asmr.value) %>% 
-  filter(month!="Annual") %>% 
-  filter(Scenario=="current")
-
-# asmrCurrent annual class
-asmrCurrentAnnual.class<-
-  asmrNorth$current$class
-
-# asmrCurrent annual values
-asmrCurrentAnnual.values<-
-  asmrNorth$current$asmr
-
-# stationList
-stnData<-stnData2
- 
-# FINAL LIST
-asmrNorth=list(
-  current=list(annual=list(asmr=asmrCurrentAnnual.values,class=asmrCurrentAnnual.class),
-      monthly=list(asmr=asmrCurrentMonthly.value, class=asmrCurrentMonthly.class)),
-  
-  future=list(annual=list(asmr=asmrFutureAnnual.asmr,class=asmrFutureAnnual.class),
-    monthly=list(asmr=asmrFutureMonthly.asmr, class=asmrFutureMonthly.class)),
-  
-    stnData=stnData
-   
-  )
-
+load("asmrNorth.rda")
 
 
 

@@ -99,9 +99,9 @@ write.table(rcp85, "clipboard", sep="\t", row.names=FALSE)
 x<-
   meanRCP %>% 
   pivot_longer(-bgc) %>% 
-  mutate(RSMR=str_split_fixed(x$name,pattern=fixed("."),n=2)[,1]) %>% 
+  mutate(RSMR=str_split_fixed(name,pattern=fixed("."),n=2)[,1]) %>% 
   mutate(RSMR=str_remove(RSMR,pattern="[S]")) %>% 
-  mutate(Period=str_split_fixed(x$name,pattern=fixed("."),n=2)[,2]) %>%
+  mutate(Period=str_split_fixed(name,pattern=fixed("."),n=2)[,2]) %>%
   dplyr::select(-name) %>% 
   pivot_wider(names_from="Period",values_from="value") %>% 
   setNames(c("BGC","RSMR","Current","2025","2055","2085"))
